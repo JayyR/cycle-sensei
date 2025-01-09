@@ -1,0 +1,26 @@
+################
+GET http://localhost:8080
+
+################
+GET http://localhost:8080/athlete
+
+
+################
+GET http://localhost:8080/athlete/zones
+
+################
+GET http://localhost:8080/athlete/41803353/stats
+
+################
+GET http://localhost:8080/activities
+
+################
+POST http://localhost:8080/embeddings
+Content-Type: application/json
+
+{
+    "value": "Hello"
+}
+
+################
+GET http://localhost:8080/vector-search?query="When did the Monarch Company exist?"
