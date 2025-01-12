@@ -12,8 +12,10 @@ GET http://localhost:8080/athlete/zones
 GET http://localhost:8080/athlete/41803353/stats
 
 ################
-GET http://localhost:8080/activities
+GET http://localhost:8080/athlete/activities
 
+################
+GET http://localhost:8080/athlete/activities/13304198003
 ################
 POST http://localhost:8080/embeddings
 Content-Type: application/json

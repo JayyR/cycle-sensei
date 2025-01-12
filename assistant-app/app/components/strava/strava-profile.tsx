@@ -20,7 +20,7 @@ const StravaProfile = () => {
 
     const athleteData = localStorage.getItem("athlete");
     const athleteTimestamp = localStorage.getItem("athleteTimestamp");
-    const isExpired = athleteTimestamp && (Date.now() - parseInt(athleteTimestamp, 10)) > 24 * 60 * 60 * 1000;
+    const isExpired = athleteTimestamp && (Date.now() - parseInt(athleteTimestamp, 10)) > 7 * 24 * 60 * 60 * 1000;
 
     if (athleteData && !isExpired) {
       setAthlete(JSON.parse(athleteData));

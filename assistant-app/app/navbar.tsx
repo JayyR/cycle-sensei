@@ -24,7 +24,7 @@ const Navigation = () => {
                 <AcmeLogo />
 
                 <Link color="foreground" href="/">
-                    <p className="font-bold text-inherit">Cycling AI Coach</p>
+                    <p className="font-bold text-inherit">Cycle Sensei</p>
                 </Link>
             </NavbarBrand>
             <NavbarContent className="hidden sm:flex gap-4" justify="start">

@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"unicode"
 
 	services "github.com/cycleai/go-app/internal/service"
 	"github.com/joho/godotenv"
@@ -18,6 +19,15 @@ func init() {
 
 	services.Initialize()
 
+}
+
+func isNumeric(s string) bool {
+	for _, r := range s {
+		if !unicode.IsDigit(r) {
+			return false
+		}
+	}
+	return true
 }
 
 func main() {
@@ -56,9 +66,31 @@ func main() {
 		return c.String(http.StatusOK, athleteZonesJSON)
 	})
 
-	e.GET("/activities", func(c echo.Context) error {
-		services.LoadActivities()
-		return c.String(http.StatusOK, "Activities loaded")
+	e.GET("/athlete/activities", func(c echo.Context) error {
+		page := c.QueryParam("page")
+		if page == "" || !isNumeric(page) {
+			page = "1"
+		}
+		perPage := c.QueryParam("perPage")
+		if perPage == "" || !isNumeric(perPage) {
+			perPage = "10"
+		}
+		athleteActivitiesJSON, err := services.GetLoggedInAthleteActivities(page, perPage)
+
+		if err != nil {
+			return c.String(http.StatusInternalServerError, "Error fetching athlete activities")
+		}
+		return c.String(http.StatusOK, athleteActivitiesJSON)
+	})
+
+	e.GET("/athlete/activities/:id", func(c echo.Context) error {
+		id := c.Param("id")
+		athleteActivitiesJSON, err := services.GetLoggedInAthleteActivity(id)
+
+		if err != nil {
+			return c.String(http.StatusInternalServerError, "Error fetching athlete activities")
+		}
+		return c.String(http.StatusOK, athleteActivitiesJSON)
 	})
 
 	e.POST("/embeddings", func(c echo.Context) error {

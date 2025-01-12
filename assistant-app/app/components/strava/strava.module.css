@@ -49,8 +49,6 @@
     border-radius: 16px;
 }
 
-
-
 .fieldEntry {
     display: flex;
     justify-content: space-between;
@@ -66,4 +64,23 @@
 
 .fieldSubTitle {
     font-size: 0.9em;
+}
+
+.zonesContainer {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    flex: 1;
+}
+
+.zoneColumn {
+    flex: 1;
+}
+
+.progressContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    max-width: 400px;
 }
