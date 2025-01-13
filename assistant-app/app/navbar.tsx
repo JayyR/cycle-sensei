@@ -1,8 +1,7 @@
 "use client";
 
 import { Navbar, NavbarBrand, NavbarContent, NavbarItem, Link } from "@nextui-org/react";
-
-
+import StravaAuth from "./components/strava/strava-auth";
 
 const AcmeLogo = () => {
     return (
@@ -40,8 +39,8 @@ const Navigation = () => {
                 </NavbarItem>
             </NavbarContent>
             <NavbarContent justify="end">
-                <NavbarItem className="hidden lg:flex">
-                    <Link href="#">Login</Link>
+                <NavbarItem>
+                   <StravaAuth/>
                 </NavbarItem>
             </NavbarContent>
         </Navbar>

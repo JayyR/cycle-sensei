@@ -7,9 +7,9 @@ import { CardBody, Card, Accordion, AccordionItem, Spacer } from "@nextui-org/re
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faAnglesDown, faPersonBiking, faZ } from '@fortawesome/free-solid-svg-icons';
 import Chat from "../components/chat/chat";
-import StravaProfile from "../components/strava/strava-profile";
-import StravaZones from "../components/strava/strava-zones";
-import StravaActivities from "../components/strava/strava-activities";
+import AthleteActivities from "../components/athlete/activities";
+import AthleteStats from "../components/athlete/stats";
+import AthleteZones from "../components/athlete/zones";
 
 const Home = () => {
   return (
@@ -18,7 +18,7 @@ const Home = () => {
         <div className={styles.column}>
           <Card>
             <CardBody>
-              <StravaProfile />
+              <AthleteStats />
             </CardBody>
           </Card>
           <Accordion variant="splitted" defaultExpandedKeys={["2"]}>
@@ -43,7 +43,7 @@ const Home = () => {
               }
               indicator={<FontAwesomeIcon icon={faAnglesDown} />}
             >
-              <StravaZones />
+              <AthleteZones />
             </AccordionItem>
 
             <AccordionItem key="2" aria-label="Recent Activities" 
@@ -55,7 +55,7 @@ const Home = () => {
             }
             startContent={<FontAwesomeIcon icon={faPersonBiking} beat />}
             indicator={<FontAwesomeIcon icon={faAnglesDown} />}>
-              <StravaActivities />
+              <AthleteActivities />
             </AccordionItem>
           </Accordion>
         </div>

@@ -156,14 +156,15 @@ const PowerZonesTable = ({ zones }) => {
     );
 }
 
-const StravaZones = () => {
+const AthleteZones = () => {
 
     const [zones, setZones] = React.useState(null);
 
     useEffect(() => {
         const fetchZones = async () => {
             const currentTime = Date.now();
-            const response = await fetch("/api/strava/athlete/zones");
+            const athleteId = sessionStorage.getItem("stravaAthleteId");
+            const response = await fetch(`/api/athlete/${athleteId}/zones`);
             const data = await response.json();
             localStorage.setItem("stravaZones", JSON.stringify(data));
             localStorage.setItem("stravaZonesTime", currentTime.toString());
@@ -213,4 +214,4 @@ const StravaZones = () => {
 
 
 
-export default StravaZones;
+export default AthleteZones;

@@ -13,7 +13,7 @@ import {
     Spinner,
 
 } from "@nextui-org/react";
-import StravaActivity from "./strava-activity";
+import AthleteActivity from "./activity";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -31,11 +31,12 @@ const formatDate = (dateString: string) => {
 };
 
 
-const StravaActivities = () => {
+const AthleteActivities = () => {
     const [page, setPage] = useState(1);
     const [selectedActivityId, setSelectedActivityId] = useState<number | null>(null);
     const itemsPerPage = 10;
-    const { data, isLoading } = useSWR(`/api/strava/athlete/activities?page=${page}&per_page=${itemsPerPage}`, fetcher, {
+    const athleteId = sessionStorage.getItem("stravaAthleteId");
+    const { data, isLoading } = useSWR(`/api/athlete/${athleteId}/activities?page=${page}&per_page=${itemsPerPage}`, fetcher, {
         keepPreviousData: true,
     });
     console.log(data);
@@ -98,11 +99,11 @@ const StravaActivities = () => {
                 </TableBody>
             </Table>
             {Boolean(selectedActivityId) && (
-                <StravaActivity id={selectedActivityId} isOpen={isOpen} onOpenChange={setIsOpen} />
+                <AthleteActivity id={selectedActivityId} isOpen={isOpen} onOpenChange={setIsOpen} />
             )}
         </>
 
     );
 };
 
-export default StravaActivities;
+export default AthleteActivities;

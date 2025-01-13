@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button, Card, CardBody, Drawer, DrawerBody, DrawerContent, DrawerFooter, DrawerHeader, Tooltip } from "@nextui-org/react";
 import { useEffect, useState } from "react";
 
-const StravaActivity = ({ id, isOpen, onOpenChange }) => {
+const AthleteActivity = ({ id, isOpen, onOpenChange }) => {
     const [activity, setActivity] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -13,7 +13,8 @@ const StravaActivity = ({ id, isOpen, onOpenChange }) => {
         const fetchActivity = async () => {
             setLoading(true); // Reset loading state to true when id changes
             try {
-                const response = await fetch(`/api/strava/athlete/activities/${id}`);
+                const athleteId = sessionStorage.getItem("stravaAthleteId");
+                const response = await fetch(`/api/athlete/${athleteId}/activities/${id}`);
                 const data = await response.json();
                 setActivity(data);
             } catch (error) {
@@ -86,4 +87,4 @@ const StravaActivity = ({ id, isOpen, onOpenChange }) => {
     );
 };
 
-export default StravaActivity;
+export default AthleteActivity;

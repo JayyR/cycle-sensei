@@ -11,9 +11,8 @@ import (
 	strava "github.com/obalunenko/strava-api/client"
 )
 
-func GetLoggedInAthlete() (string, error) {
-
-	apiClient, err := getAPIClient()
+func GetLoggedInAthlete(stravaAuthToken string) (string, error) {
+	apiClient, err := getAPIClient(stravaAuthToken)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -38,9 +37,8 @@ func GetLoggedInAthlete() (string, error) {
 	return string(athleteJSON), nil
 }
 
-func GetLoggedInAthleteZones() (string, error) {
-
-	apiClient, err := getAPIClient()
+func GetLoggedInAthleteZones(stravaAuthToken string) (string, error) {
+	apiClient, err := getAPIClient(stravaAuthToken)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,9 +63,8 @@ func GetLoggedInAthleteZones() (string, error) {
 	return string(athleteZoneJSON), nil
 }
 
-func GetLoggedInAthleteStats(id string) (string, error) {
-
-	apiClient, err := getAPIClient()
+func GetLoggedInAthleteStats(stravaAuthToken string, id string) (string, error) {
+	apiClient, err := getAPIClient(stravaAuthToken)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -96,8 +93,8 @@ func GetLoggedInAthleteStats(id string) (string, error) {
 	return string(athleteStatsJSON), nil
 }
 
-func GetLoggedInAthleteActivities(p string, pp string) (string, error) {
-	apiClient, err := getAPIClient()
+func GetLoggedInAthleteActivities(stravaAuthToken string, p string, pp string) (string, error) {
+	apiClient, err := getAPIClient(stravaAuthToken)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -127,7 +124,6 @@ func GetLoggedInAthleteActivities(p string, pp string) (string, error) {
 
 	activitySummaries := make([]ActivitySummary, len(activities))
 	for i, activity := range activities {
-
 		activitySummaries[i] = ActivitySummary{
 			ID:        activity.ID,
 			Name:      activity.Name,
@@ -140,11 +136,10 @@ func GetLoggedInAthleteActivities(p string, pp string) (string, error) {
 		log.Fatal(err)
 	}
 	return string(activityJSON), nil
-
 }
 
-func GetLoggedInAthleteActivity(id string) (string, error) {
-	apiClient, err := getAPIClient()
+func GetLoggedInAthleteActivity(stravaAuthToken string, id string) (string, error) {
+	apiClient, err := getAPIClient(stravaAuthToken)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -178,7 +173,6 @@ func GetLoggedInAthleteActivity(id string) (string, error) {
 		log.Fatal(err)
 	}
 	return string(activityJSON), nil
-
 }
 
 // Define a new struct that omits the segment_efforts field
@@ -220,7 +214,7 @@ type CustomAthlete struct {
 }
 
 func LoadActivities() {
-	apiClient, err := getAPIClient()
+	apiClient, err := getAPIClient("")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -264,7 +258,7 @@ func LoadActivities() {
 
 func GetActivity(id int64) {
 	log.Printf("Getting activity %d", id)
-	apiClient, err := getAPIClient()
+	apiClient, err := getAPIClient("")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -283,12 +277,12 @@ func GetActivity(id int64) {
 	fmt.Println(string(activityJSON))
 }
 
-func getAPIClient() (*strava.APIClient, error) {
+func getAPIClient(stravaAuthToken string) (*strava.APIClient, error) {
 	if !stravaInitialized {
 		return nil, fmt.Errorf("strava service is not initialized")
 	}
 
-	apiClient, err := strava.NewAPIClient(accessToken)
+	apiClient, err := strava.NewAPIClient(stravaAuthToken)
 	if err != nil {
 		log.Fatal(err)
 	}

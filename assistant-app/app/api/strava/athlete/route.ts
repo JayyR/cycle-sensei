@@ -1,14 +1,40 @@
+import { getTokenFromCookies } from '../../../../utils/auth';
 
-// Get athletes from Strava
-export async function GET() {
+export async function GET(request) {
+    const cookieHeader = request.headers.get('cookie');
+    const accessToken = getTokenFromCookies(cookieHeader);
+
+    if (!accessToken) {
+        return new Response(JSON.stringify({ message: "No token found" }), {
+            status: 401,
+        });
+    }
+
     try {
-        const response = await fetch('http://localhost:8080/athlete');
+        const response = await fetch('https://www.strava.com/api/v3/athlete', {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+            },
+        });
+
         if (!response.ok) {
-            throw new Error('Network response was not ok');
+            throw new Error('Failed to fetch athlete info');
         }
+
         const data = await response.json();
-        return Response.json(data);
+        const headers = new Headers();
+        headers.append(
+            "Set-Cookie",
+            `athleteId=${data.id}; HttpOnly; Secure; Path=/;`
+        );
+
+        return new Response(JSON.stringify(data), {
+            status: 200,
+            headers: headers,
+        });
     } catch (error) {
-       return new Response(null, { status: 500, statusText: error.message });
+        return new Response(JSON.stringify({ message: error.message }), {
+            status: 500,
+        });
     }
 }
