@@ -25,4 +25,7 @@ Content-Type: application/json
 }
 
 ################
+
+GET http://localhost:8080/athlete/41803353/activities?page=-1&perPage=-1
+################
 GET http://localhost:8080/vector-search?query="When did the Monarch Company exist?"

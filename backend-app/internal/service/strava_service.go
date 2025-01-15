@@ -9,7 +9,11 @@ import (
 	"time"
 
 	strava "github.com/obalunenko/strava-api/client"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
+
+var rateLimiter = NewRateLimiter(6, 15*time.Minute)
 
 func GetLoggedInAthlete(stravaAuthToken string) (string, error) {
 	apiClient, err := getAPIClient(stravaAuthToken)
@@ -93,86 +97,200 @@ func GetLoggedInAthleteStats(stravaAuthToken string, id string) (string, error) 
 	return string(athleteStatsJSON), nil
 }
 
-func GetLoggedInAthleteActivities(stravaAuthToken string, p string, pp string) (string, error) {
-	apiClient, err := getAPIClient(stravaAuthToken)
+func GetLoggedInAthleteActivities(athleteId string, p string, pp string) (string, error) {
+	log.Printf("Getting activities for athlete %s", athleteId)
+	activities, err := GetActivitiesFromDB(athleteId, p, pp)
 	if err != nil {
-		log.Fatal(err)
+		return "", fmt.Errorf("Failed to get activities from DB: %v", err)
 	}
 
-	ctx, cancel := createContext()
-	defer cancel()
-
-	pageInt, err := strconv.ParseInt(p, 10, 32)
+	activityJSON, err := json.Marshal(activities)
 	if err != nil {
-		log.Fatal(err)
+		return "", fmt.Errorf("Failed to marshal activities to JSON: %v", err)
 	}
-	page := int32(pageInt)
-	perPageInt, err := strconv.ParseInt(pp, 10, 32)
-	if err != nil {
-		log.Fatal(err)
-	}
-	perPage := int32(perPageInt)
-	options := strava.GetLoggedInAthleteActivitiesOpts{
-		Page:    &page,
-		PerPage: &perPage,
-	}
-
-	activities, err := apiClient.Activities.GetLoggedInAthleteActivities(ctx, options)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	activitySummaries := make([]ActivitySummary, len(activities))
-	for i, activity := range activities {
-		activitySummaries[i] = ActivitySummary{
-			ID:        activity.ID,
-			Name:      activity.Name,
-			StartDate: time.Time(activity.StartDate),
-			SportType: string(activity.SportType),
-		}
-	}
-	activityJSON, err := json.Marshal(activitySummaries)
-	if err != nil {
-		log.Fatal(err)
-	}
+	log.Printf("number of activities loaded ", len(activities))
 	return string(activityJSON), nil
 }
 
-func GetLoggedInAthleteActivity(stravaAuthToken string, id string) (string, error) {
-	apiClient, err := getAPIClient(stravaAuthToken)
-	if err != nil {
-		log.Fatal(err)
+func GetLoggedInAthleteActivity(stravaAuthToken string, activityId string) (string, error) {
+	log.Printf("Getting activity %s", activityId)
+	if !mongoInitialized {
+		return "", fmt.Errorf("MongoDB is not initialized")
 	}
 
+	collection := mongoClient.Database("cycle_sensei").Collection("activities")
 	ctx, cancel := createContext()
 	defer cancel()
 
-	athleteID, err := strconv.ParseInt(id, 10, 64)
+	activityID, err := strconv.Atoi(activityId)
 	if err != nil {
-		log.Fatal(err)
+		return "", fmt.Errorf("Invalid activity ID: %v", err)
 	}
 
-	options := strava.GetActivityByIdOpts{
-		IncludeAllEfforts: func(b bool) *bool { return &b }(false),
+	filter := bson.M{
+		"id": activityID,
 	}
 
-	activity, err := apiClient.Activities.GetActivityById(ctx, athleteID, options)
+	var activity map[string]interface{}
+	err = collection.FindOne(ctx, filter).Decode(&activity)
 	if err != nil {
-		log.Fatal(err)
+		if err == mongo.ErrNoDocuments {
+			return "", fmt.Errorf("No activity found for activity ID %d", activityID)
+		}
+		return "", fmt.Errorf("Failed to get activity: %v", err)
 	}
+	log.Println("Activity found")
 
-	activityWithoutSegmentEfforts := ActivityWithoutSegmentEfforts{
-		ID:        activity.ID,
-		Name:      activity.Name,
-		StartDate: time.Time(activity.StartDate),
-		// Copy other fields as needed
-	}
-
-	activityJSON, err := json.Marshal(activityWithoutSegmentEfforts)
+	activityJSON, err := json.Marshal(activity)
 	if err != nil {
-		log.Fatal(err)
+		return "", fmt.Errorf("Failed to marshal activity to JSON: %v", err)
 	}
+	log.Printf("Activity loaded %s", activityJSON)
+
 	return string(activityJSON), nil
+}
+
+func RefreshActivities(token string, athleteId string) error {
+	go func() {
+		lastSyncedDate, err := GetLastSyncedDate(athleteId)
+		if err != nil {
+			log.Println("Error getting last synced date:", err)
+			updateSyncStatus(athleteId, "failed")
+			return
+		}
+
+		updateSyncStatus(athleteId, "processing")
+
+		activities := loadActivities(token, 10, lastSyncedDate)
+		err = SaveActivities(athleteId, activities)
+		if err != nil {
+			log.Println("Error saving activities:", err)
+			updateSyncStatus(athleteId, "failed")
+			return
+		}
+
+		err = UpdateLastSyncedDate(athleteId, time.Now().Unix())
+		if err != nil {
+			log.Println("Error updating last synced date:", err)
+			updateSyncStatus(athleteId, "failed")
+			return
+		}
+
+		updateSyncStatus(athleteId, "completed")
+	}()
+
+	return nil
+}
+
+func loadActivities(token string, max int, fetchAfter int64) []string {
+	apiClient, err := getAPIClient(token)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	page := int32(1)
+	perPage := int32(30)
+	maxPages := max
+	maxActivities := maxPages * int(perPage)
+	loadedActivities := 0
+	var activitiesArray []string // Initialize an array to store activity JSON
+
+	for page <= int32(maxPages) {
+
+		if loadedActivities >= maxActivities {
+			break
+		}
+		options := strava.GetLoggedInAthleteActivitiesOpts{
+			Page:    &page,
+			PerPage: &perPage,
+			After:   &fetchAfter,
+		}
+
+		ctx, cancel := createContext()
+		defer cancel()
+
+		// Use rate limiter to ensure we do not exceed the rate limit
+		err = rateLimiter.Call(func() error {
+			activities, err := apiClient.Activities.GetLoggedInAthleteActivities(ctx, options)
+			if err != nil {
+				return err
+			}
+
+			if len(activities) == 0 {
+				return nil
+			}
+			loadedActivities += len(activities)
+
+			fmt.Printf("Page %d\n", page)
+			for _, activity := range activities {
+				fmt.Println(activity.Athlete.ID, activity.Name, activity.StartDate)
+				activityJSON := getActivity(activity.ID, token)
+				fmt.Println(string(activityJSON))
+				activitiesArray = append(activitiesArray, string(activityJSON)) // Add activity JSON to array
+			}
+
+			// Periodically save activities to MongoDB
+			if len(activitiesArray) > 0 {
+				err = SaveActivities(token, activitiesArray)
+				if err != nil {
+					log.Println("Error saving activities:", err)
+					return err
+				}
+				activitiesArray = activitiesArray[:0] // Clear the array after saving
+			}
+
+			return nil
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		page++
+	}
+
+	return activitiesArray
+}
+
+func getActivity(id int64, token string) []byte {
+	log.Printf("Getting activity %d", id)
+	apiClient, err := getAPIClient(token)
+	if err != nil {
+		log.Fatal(err)
+	}
+	ctx, cancel := createContext()
+	defer cancel()
+
+	activity, err := apiClient.Activities.GetActivityById(ctx, id)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	activityJSON, err := activity.MarshalJSON()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return activityJSON
+}
+
+func getAPIClient(stravaAuthToken string) (*strava.APIClient, error) {
+	if !stravaInitialized {
+		return nil, fmt.Errorf("strava service is not initialized")
+	}
+
+	apiClient, err := strava.NewAPIClient(stravaAuthToken)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if apiClient == nil {
+		log.Fatal("apiClient is not initialized")
+	}
+
+	return apiClient, nil
+}
+
+func createContext() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), 10*time.Second)
 }
 
 // Define a new struct that omits the segment_efforts field
@@ -213,87 +331,35 @@ type CustomAthlete struct {
 	Weight                float32   `json:"weight"`
 }
 
-func LoadActivities() {
-	apiClient, err := getAPIClient("")
-	if err != nil {
-		log.Fatal(err)
-	}
+type RateLimiter struct {
+	requests  int
+	resetTime time.Time
+	limit     int
+	interval  time.Duration
+}
 
-	page := int32(1)
-	perPage := int32(3)
-	maxPages := 1
-	maxActivities := maxPages * int(perPage)
-	loadedActivities := 0
-
-	for page <= int32(maxPages) {
-
-		if loadedActivities >= maxActivities {
-			break
-		}
-		options := strava.GetLoggedInAthleteActivitiesOpts{
-			Page:    &page,
-			PerPage: &perPage,
-		}
-
-		ctx, cancel := createContext()
-		defer cancel()
-		activities, err := apiClient.Activities.GetLoggedInAthleteActivities(ctx, options)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if len(activities) == 0 {
-			break
-		}
-		loadedActivities += len(activities)
-
-		fmt.Printf("Page %d\n", page)
-		for _, activity := range activities {
-			fmt.Println(activity.Athlete.ID, activity.Name, activity.StartDate)
-			GetActivity(activity.ID)
-		}
-		page++
+func NewRateLimiter(limit int, interval time.Duration) *RateLimiter {
+	return &RateLimiter{
+		requests:  0,
+		resetTime: time.Now().Add(interval),
+		limit:     limit,
+		interval:  interval,
 	}
 }
 
-func GetActivity(id int64) {
-	log.Printf("Getting activity %d", id)
-	apiClient, err := getAPIClient("")
-	if err != nil {
-		log.Fatal(err)
+func (r *RateLimiter) Call(fn func() error) error {
+	if r.requests >= r.limit {
+		waitTime := time.Until(r.resetTime)
+		if waitTime > 0 {
+			time.Sleep(waitTime)
+		}
+		r.reset()
 	}
-	ctx, cancel := createContext()
-	defer cancel()
-
-	activity, err := apiClient.Activities.GetActivityById(ctx, id)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	activityJSON, err := activity.MarshalJSON()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(activityJSON))
+	r.requests++
+	return fn()
 }
 
-func getAPIClient(stravaAuthToken string) (*strava.APIClient, error) {
-	if !stravaInitialized {
-		return nil, fmt.Errorf("strava service is not initialized")
-	}
-
-	apiClient, err := strava.NewAPIClient(stravaAuthToken)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if apiClient == nil {
-		log.Fatal("apiClient is not initialized")
-	}
-
-	return apiClient, nil
-}
-
-func createContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), 10*time.Second)
+func (r *RateLimiter) reset() {
+	r.requests = 0
+	r.resetTime = time.Now().Add(r.interval)
 }

@@ -5,7 +5,7 @@ import styles from "./page.module.css"; // use simple styles for demonstration p
 
 import { CardBody, Card, Accordion, AccordionItem, Spacer } from "@nextui-org/react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faAnglesDown, faPersonBiking, faZ } from '@fortawesome/free-solid-svg-icons';
+import { faAnglesDown, faChartLine, faPersonBiking, faZ } from '@fortawesome/free-solid-svg-icons';
 import Chat from "../components/chat/chat";
 import AthleteActivities from "../components/athlete/activities";
 import AthleteStats from "../components/athlete/stats";
@@ -16,20 +16,47 @@ const Home = () => {
     <main className={styles.main}>
       <div className={styles.container}>
         <div className={styles.column}>
-          <Card>
-            <CardBody>
-              <AthleteStats />
-            </CardBody>
-          </Card>
-          <Accordion variant="splitted" defaultExpandedKeys={["2"]}>
-            <AccordionItem key="1" aria-label="Athlete Zones"
+          <Accordion variant="splitted" defaultExpandedKeys={["0"]}>
+
+            <AccordionItem key="0" aria-label="Recent Activities"
+              title={
+                <div className="flex" style={{ justifyContent: "flex-start" }}>
+                  <p>Recent Activities</p>
+                  <Spacer x={4} />
+                </div>
+              }
+              startContent={<FontAwesomeIcon icon={faPersonBiking} />}
+              indicator={<FontAwesomeIcon icon={faAnglesDown} />}
+            >
+              <AthleteActivities />
+            </AccordionItem>
+
+            <AccordionItem key="1" aria-label="Athlete Stats"
+              title={
+                <div className="flex" style={{ justifyContent: "flex-start" }}>
+                  <p>Stats</p>
+                  <Spacer x={4} />
+                </div>
+              }
+              startContent={<FontAwesomeIcon icon={faChartLine} />}
+              indicator={<FontAwesomeIcon icon={faAnglesDown} />}
+            >
+              <Card>
+                <CardBody>
+                  <AthleteStats />
+                </CardBody>
+              </Card>
+            </AccordionItem>
+
+
+            <AccordionItem key="2" aria-label="Athlete Zones"
               title={
                 <div className="flex" style={{ justifyContent: "flex-start" }}>
                   <p>Athlete Zones</p>
                   <Spacer x={4} />
                 </div>
               }
-              startContent={<FontAwesomeIcon icon={faZ} beat />}
+              startContent={<FontAwesomeIcon icon={faZ} />}
               subtitle={
                 <div className="flex" style={{ justifyContent: "space-between", width: "30%" }}>
                   <p>
@@ -45,18 +72,7 @@ const Home = () => {
             >
               <AthleteZones />
             </AccordionItem>
-
-            <AccordionItem key="2" aria-label="Recent Activities" 
-            title={
-              <div className="flex" style={{ justifyContent: "flex-start" }}>
-                <p>Recent Activities</p>
-                <Spacer x={4} />
-              </div>
-            }
-            startContent={<FontAwesomeIcon icon={faPersonBiking} beat />}
-            indicator={<FontAwesomeIcon icon={faAnglesDown} />}>
-              <AthleteActivities />
-            </AccordionItem>
+            
           </Accordion>
         </div>
         <div className={styles.chatContainer}>

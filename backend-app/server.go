@@ -22,6 +22,9 @@ func init() {
 }
 
 func isNumeric(s string) bool {
+	if s == "-1" {
+		return true
+	}
 	for _, r := range s {
 		if !unicode.IsDigit(r) {
 			return false
@@ -72,7 +75,7 @@ func main() {
 	})
 
 	e.GET("/athlete/:id/activities", func(c echo.Context) error {
-		stravaAuthToken := c.Request().Header.Get("StravaAuthToken")
+		//stravaAuthToken := c.Request().Header.Get("StravaAuthToken")
 		page := c.QueryParam("page")
 		if page == "" || !isNumeric(page) {
 			page = "1"
@@ -81,7 +84,8 @@ func main() {
 		if perPage == "" || !isNumeric(perPage) {
 			perPage = "10"
 		}
-		athleteActivitiesJSON, err := services.GetLoggedInAthleteActivities(stravaAuthToken, page, perPage)
+		id := c.Param("id")
+		athleteActivitiesJSON, err := services.GetLoggedInAthleteActivities(id, page, perPage)
 
 		if err != nil {
 			return c.String(http.StatusInternalServerError, "Error fetching athlete activities")
@@ -91,13 +95,24 @@ func main() {
 
 	e.GET("/athlete/:athleteId/activities/:activityId", func(c echo.Context) error {
 		stravaAuthToken := c.Request().Header.Get("StravaAuthToken")
-		id := c.Param("activityId")
-		athleteActivitiesJSON, err := services.GetLoggedInAthleteActivity(stravaAuthToken, id)
-
+		activityId := c.Param("activityId")
+		athleteActivitiesJSON, err := services.GetLoggedInAthleteActivity(stravaAuthToken, activityId)
+		log.Println(athleteActivitiesJSON)
 		if err != nil {
 			return c.String(http.StatusInternalServerError, "Error fetching athlete activities")
 		}
 		return c.String(http.StatusOK, athleteActivitiesJSON)
+	})
+
+	e.PATCH("/athlete/:athleteId/activities", func(c echo.Context) error {
+		stravaAuthToken := c.Request().Header.Get("StravaAuthToken")
+		athleteId := c.Param("athleteId")
+		err := services.RefreshActivities(stravaAuthToken, athleteId)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, "Error Refreshing athlete activities")
+		}
+
+		return c.NoContent(http.StatusOK)
 	})
 
 	e.POST("/embeddings", func(c echo.Context) error {

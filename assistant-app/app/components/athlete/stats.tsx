@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { User, Skeleton, Tabs, Card, CardBody, Tab } from "@nextui-org/react";
+import { Skeleton, Tabs, Card, CardBody, Tab } from "@nextui-org/react";
 
 const AthleteStats = () => {
 
@@ -32,43 +32,34 @@ const AthleteStats = () => {
   return (
     <div>
       {athlete && (
-        <><div className="max-w-[300px] w-full flex items-center gap-3">
-          <User
-            avatarProps={{
-              size: "lg",
-              src: "https://dgalywyr863hv.cloudfront.net/pictures/athletes/41803353/19718900/8/large.jpg",
-            }}
-            description={`${athlete.city}, ${athlete.state}`}
-            name={`${athlete.biggest_ride_distance} ${athlete.biggest_climb_elevation_gain}`} />
-        </div>
         <Tabs aria-label="Options">
-            <Tab key="photos" title="Photos">
-              <Card>
-                <CardBody>
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-                  incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-                  exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-                </CardBody>
-              </Card>
-            </Tab>
-            <Tab key="music" title="Music">
-              <Card>
-                <CardBody>
-                  Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex
-                  ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
-                  cillum dolore eu fugiat nulla pariatur.
-                </CardBody>
-              </Card>
-            </Tab>
-            <Tab key="videos" title="Videos">
-              <Card>
-                <CardBody>
-                  Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt
-                  mollit anim id est laborum.
-                </CardBody>
-              </Card>
-            </Tab>
-          </Tabs></>
+          <Tab key="weekly" title="Weekly">
+            <Card>
+              <CardBody>
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+                incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
+                exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+              </CardBody>
+            </Card>
+          </Tab>
+          <Tab key="yeartodate" title="Year to Date">
+            <Card>
+              <CardBody>
+                Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex
+                ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
+                cillum dolore eu fugiat nulla pariatur.
+              </CardBody>
+            </Card>
+          </Tab>
+          <Tab key="alltime" title="All Time">
+            <Card>
+              <CardBody>
+                Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt
+                mollit anim id est laborum.
+              </CardBody>
+            </Card>
+          </Tab>
+        </Tabs>
       )}
 
       {!athlete && (

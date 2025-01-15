@@ -1,6 +1,6 @@
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 
-//Get athletes activities from Strava
+// Get athletes activities from Strava
 export async function GET(request: Request, context: { params: { athleteId: string } }) {
     const { athleteId } = context.params;
     const url = new URL(request.url);
@@ -8,8 +8,25 @@ export async function GET(request: Request, context: { params: { athleteId: stri
     const perPage = url.searchParams.get('per_page') || '10';
 
     try {
-        const data = await fetchWithAuth(`http://localhost:8080/athlete/${athleteId}/activities?page=${page}&perPage=${perPage}`,request);
+        const data = await fetchWithAuth(`http://localhost:8080/athlete/${athleteId}/activities?page=${page}&perPage=${perPage}`, request);
         
+        return new Response(JSON.stringify(data), {
+            headers: { 'Content-Type': 'application/json' },
+        });
+    } catch (error) {
+        return new Response(null, { status: 500, statusText: error.message });
+    }
+}
+
+// Refresh athletes activities in Strava
+export async function PATCH(request: Request, context: { params: { athleteId: string } }) {
+    const { athleteId } = context.params;
+
+    try {
+        const data = await fetchWithAuth(`http://localhost:8080/athlete/${athleteId}/activities`, request, {
+            method: "PATCH",
+        });
+
         return new Response(JSON.stringify(data), {
             headers: { 'Content-Type': 'application/json' },
         });
