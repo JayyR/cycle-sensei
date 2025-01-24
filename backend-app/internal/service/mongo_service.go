@@ -218,7 +218,6 @@ func updateSyncStatus(athleteId string, status string) {
 }
 
 func GetActivitiesFromDB(athleteId string, p string, pp string) ([]map[string]interface{}, error) {
-	log.Printf("GetActivitiesFromDB")
 	if !mongoInitialized {
 		return nil, fmt.Errorf("MongoDB is not initialized")
 	}
@@ -249,7 +248,16 @@ func GetActivitiesFromDB(athleteId string, p string, pp string) ([]map[string]in
 		},
 	}
 
-	findOptions := options.Find().SetSort(map[string]interface{}{"start_date": -1})
+	findOptions := options.Find().
+		SetSort(map[string]interface{}{"start_date": -1}).
+		SetProjection(map[string]interface{}{
+			"id":         1,
+			"name":       1,
+			"start_date": 1,
+			"sport_type": 1,
+			"_id":        0,
+		})
+
 	if page != -1 && perPage != -1 {
 		skip := (page - 1) * perPage
 		limit := int64(perPage)
@@ -257,6 +265,51 @@ func GetActivitiesFromDB(athleteId string, p string, pp string) ([]map[string]in
 	}
 
 	cursor, err := collection.Find(ctx, filter, findOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find activities: %v", err)
+	}
+	defer cursor.Close(ctx)
+
+	var activities []map[string]interface{}
+	for cursor.Next(ctx) {
+		var activity map[string]interface{}
+		err := cursor.Decode(&activity)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode activity: %v", err)
+		}
+		activities = append(activities, activity)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, fmt.Errorf("cursor error: %v", err)
+	}
+
+	return activities, nil
+}
+
+func GetSelectedActivitiesFromDB(athleteId string, activityIds []int64) ([]map[string]interface{}, error) {
+	if !mongoInitialized {
+		return nil, fmt.Errorf("MongoDB is not initialized")
+	}
+
+	collection := mongoClient.Database("cycle_sensei").Collection("activities")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Convert athleteId to int
+	athleteIdInt, err := strconv.Atoi(athleteId)
+	if err != nil {
+		return nil, fmt.Errorf("invalid athlete ID: %v", err)
+	}
+
+	filter := map[string]interface{}{
+		"athlete.id": athleteIdInt,
+		"id": map[string]interface{}{
+			"$in": activityIds,
+		},
+	}
+
+	cursor, err := collection.Find(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find activities: %v", err)
 	}

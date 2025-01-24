@@ -49,6 +49,7 @@ const AthleteActivities = () => {
     const [page, setPage] = useState(1);
     const [selectedActivityId, setSelectedActivityId] = useState<number | null>(null);
     const [selectedActivities, setSelectedActivities] = useState<SelectedActivity[]>([]);
+    const [selectedSportType, setSelectedSportType] = useState<string | null>(null);
     const itemsPerPage = -1; // Load all activities from backend
     const athleteId = sessionStorage.getItem("stravaAthleteId");
     const { data, isLoading, mutate } = useSWR(`/api/athlete/${athleteId}/activities?page=1&per_page=${itemsPerPage}`, fetcher, {
@@ -63,13 +64,15 @@ const AthleteActivities = () => {
     // Filter the data by sport_type and date range using useMemo
     const filteredData = React.useMemo(() => {
         return (data ?? []).filter((item: Activity) => {
-            const isSportTypeValid = ["VirtualRide", "Ride", "GravelRide", "MountainBikeRide"].includes(item.sport_type);
+            const validSportTypes = ["VirtualRide", "Ride", "GravelRide", "MountainBikeRide"];
+            const isSportTypeValid = validSportTypes.includes(item.sport_type);
+            const matchesSportType = selectedSportType ? item.sport_type === selectedSportType : true;
             const isDateInRange = dateRange.startDate && dateRange.endDate
                 ? new Date(item.start_date) >= dateRange.startDate && new Date(item.start_date) <= dateRange.endDate
                 : true;
-            return isSportTypeValid && isDateInRange;
+            return isSportTypeValid && matchesSportType && isDateInRange;
         });
-    }, [data, dateRange]);
+    }, [data, dateRange, selectedSportType]);
     console.log(filteredData);
 
     const [isOpen, setIsOpen] = React.useState(false);
@@ -116,6 +119,8 @@ const AthleteActivities = () => {
 
     useEffect(() => {
         sessionStorage.setItem("selectedActivities", JSON.stringify(selectedActivities));
+        // Also store in cookies for server-side access
+        document.cookie = `selectedActivities=${JSON.stringify(selectedActivities)}; path=/`;
     }, [selectedActivities]);
 
     const [selectedKeys, setSelectedKeys] = React.useState(new Set([]));
@@ -169,14 +174,19 @@ const AthleteActivities = () => {
         return filteredData.slice(startIndex, endIndex);
     }, [filteredData, page]);
 
+    const sportTypeAbbreviations: { [key: string]: string } = {
+        VirtualRide: 'VR',
+        Ride: 'R',
+        GravelRide: 'GR',
+        MountainBikeRide: 'MTB'
+    };
+
     const renderCell = React.useCallback((item: Activity, columnKey: React.Key) => {
         let cellContent;
         if (columnKey === "start_date") {
             cellContent = formatDate(item.start_date);
         } else if (columnKey === "actions") {
-
             cellContent = (
-
                 <div style={{ display: "flex", gap: "8px" }}>
                     <Button
                         key={`view-${item.id}`}
@@ -186,9 +196,10 @@ const AthleteActivities = () => {
                         onPress={() => handleView(item.id)}
                         size="sm"
                     />
-
                 </div>
             );
+        } else if (columnKey === "sport_type") {
+            cellContent = sportTypeAbbreviations[item.sport_type] || item.sport_type;
         } else {
             cellContent = item[columnKey as keyof Activity];
         }
@@ -216,10 +227,10 @@ const AthleteActivities = () => {
                     ) : null
                 }
                 topContent={
-                    <div className="flex flex-col gap-4" >
-                        <div className="flex justify-between gap-3 items-end">
+                    <div className="flex flex-col gap-4 w-full" > {/* Added w-full */}
+                        <div className="flex flex-wrap justify-between gap-3 items-end"> {/* Added flex-wrap */}
                             <div className="flex gap-3">
-                                <Dropdown>
+                                <Dropdown aria-label="Select Activities within">
                                     <DropdownTrigger>
                                         <Button
                                             endContent={<FontAwesomeIcon icon={faAngleDown} />}
@@ -227,7 +238,7 @@ const AthleteActivities = () => {
                                             variant="bordered"
                                         >Select Activities within</Button>
                                     </DropdownTrigger>
-                                    <DropdownMenu aria-label="Static Actions"
+                                    <DropdownMenu aria-label="Date Group Selection"
                                         onAction={(key) => {
                                             if (key === "clearAll") {
                                                 handleClearSelection();
@@ -252,32 +263,63 @@ const AthleteActivities = () => {
                                         </DropdownItem>
                                     </DropdownMenu>
                                 </Dropdown>
-                            </div>
-                            <div className="flex gap-3">
+                                
+                                <Dropdown aria-label="Filter by Sport Type">
+                                    <DropdownTrigger>
+                                        <Button
+                                            endContent={<FontAwesomeIcon icon={faAngleDown} />}
+                                            size="sm"
+                                            variant="bordered"
+                                        >
+                                            {selectedSportType ? sportTypeAbbreviations[selectedSportType] : "All Types"}
+                                        </Button>
+                                    </DropdownTrigger>
+                                    <DropdownMenu 
+                                        aria-label="Sport Type Selection"
+                                        variant="bordered"
+                                        onAction={(key) => {
+                                            if (key === "all") {
+                                                setSelectedSportType(null);
+                                            } else {
+                                                setSelectedSportType(key.toString());
+                                            }
+                                        }}
+                                    >
+                                        <DropdownItem key="all">All Types</DropdownItem>
+                                        <DropdownItem key="VirtualRide">Virtual Ride (VR)</DropdownItem>
+                                        <DropdownItem key="Ride">Ride (R)</DropdownItem>
+                                        <DropdownItem key="GravelRide">Gravel Ride (GR)</DropdownItem>
+                                        <DropdownItem key="MountainBikeRide">Mountain Bike (MTB)</DropdownItem>
+                                    </DropdownMenu>
+                                </Dropdown>
+                                
                                 <Chip color="success" variant="light">
                                     {selectedActivities.length} selected
                                 </Chip>
                             </div>
 
-                            <div className="flex gap-3">
-                                <DateRangePicker
-                                    label="Season"
-                                    pageBehavior="single"
-                                    visibleMonths={3}
-                                    variant="underlined"
-                                    size="sm"
-                                    minValue={minCalendarDate}
-                                    maxValue={maxCalendarDate}
-                                    onChange={(range) => {
-                                        const startDate = range?.start ? new Date(range.start.toString()) : null;
-                                        const endDate = range?.end ? new Date(range.end.toString()) : null;
-                                        setDateRange({ startDate, endDate });
-                                    }}
-                                />
-                                <Button color="primary"
-                                    isIconOnly
-                                    endContent={<FontAwesomeIcon icon={faRefresh} />}
-                                    onPress={handleRefresh} />
+                            <div className="flex flex-wrap gap-3 items-center"> {/* Added items-center */}
+                                <div className="flex items-center gap-2"> {/* New container to keep items in same row */}
+                                    <DateRangePicker
+                                        label="Season"
+                                        pageBehavior="single"
+                                        visibleMonths={3}
+                                        variant="underlined"
+                                        size="sm"
+                                        minValue={minCalendarDate}
+                                        maxValue={maxCalendarDate}
+                                        onChange={(range) => {
+                                            const startDate = range?.start ? new Date(range.start.toString()) : null;
+                                            const endDate = range?.end ? new Date(range.end.toString()) : null;
+                                            setDateRange({ startDate, endDate });
+                                        }}
+                                    />
+                                    <Button color="primary"
+                                        isIconOnly
+                                        endContent={<FontAwesomeIcon icon={faRefresh} />}
+                                        onPress={handleRefresh} 
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>

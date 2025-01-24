@@ -6,7 +6,7 @@ GET http://localhost:8080/athlete
 
 
 ################
-GET http://localhost:8080/athlete/zones
+GET http://localhost:8080/athlete/41803353/zones
 
 ################
 GET http://localhost:8080/athlete/41803353/stats
@@ -26,6 +26,9 @@ Content-Type: application/json
 
 ################
 
-GET http://localhost:8080/athlete/41803353/activities?page=-1&perPage=-1
+GET http://localhost:8080/athlete/41803353/activities?page=1&perPage=10
 ################
 GET http://localhost:8080/vector-search?query="When did the Monarch Company exist?"
+
+################
+GET http://localhost:8080/athlete/41803353/selected-activities?activityIds=13436599434,13427630075

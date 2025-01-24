@@ -1,7 +1,7 @@
 .chatContainer {
     display: flex;
     flex-direction: column-reverse;
-    /* height: 110vh; Set height relative to the page height */
+    height: 100vh; /*Set height relative to the page height */
     width: 100%;
 }
 

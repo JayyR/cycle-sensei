@@ -1,8 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"unicode"
 
 	services "github.com/cycleai/go-app/internal/service"
@@ -100,6 +103,30 @@ func main() {
 		log.Println(athleteActivitiesJSON)
 		if err != nil {
 			return c.String(http.StatusInternalServerError, "Error fetching athlete activities")
+		}
+		return c.String(http.StatusOK, athleteActivitiesJSON)
+	})
+
+	e.GET("/athlete/:athleteId/selected-activities", func(c echo.Context) error {
+		athleteId := c.Param("athleteId")
+		activityIdsStr := c.QueryParam("activityIds")
+		if activityIdsStr == "" {
+			return c.String(http.StatusBadRequest, "activityIds query parameter is required")
+		}
+
+		// Parse comma-separated activity IDs
+		var activityIds []int64
+		for _, idStr := range strings.Split(activityIdsStr, ",") {
+			id, err := strconv.ParseInt(idStr, 10, 64)
+			if err != nil {
+				return c.String(http.StatusBadRequest, fmt.Sprintf("invalid activity ID: %s", idStr))
+			}
+			activityIds = append(activityIds, id)
+		}
+
+		athleteActivitiesJSON, err := services.GetLoggedInAthleteSelectedActivities(athleteId, activityIds)
+		if err != nil {
+			return c.String(http.StatusInternalServerError, fmt.Sprintf("Error fetching selected activities: %v", err))
 		}
 		return c.String(http.StatusOK, athleteActivitiesJSON)
 	})

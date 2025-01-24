@@ -182,6 +182,21 @@ func RefreshActivities(token string, athleteId string) error {
 	return nil
 }
 
+func GetLoggedInAthleteSelectedActivities(athleteId string, activityIds []int64) (string, error) {
+	log.Printf("Getting selected activities for athlete %s", athleteId)
+	activities, err := GetSelectedActivitiesFromDB(athleteId, activityIds)
+	if err != nil {
+		return "", fmt.Errorf("Failed to get selected activities from DB: %v", err)
+	}
+
+	activityJSON, err := json.Marshal(activities)
+	if err != nil {
+		return "", fmt.Errorf("Failed to marshal selected activities to JSON: %v", err)
+	}
+	log.Printf("Number of selected activities loaded: %d", len(activities))
+	return string(activityJSON), nil
+}
+
 func loadActivities(token string, max int, fetchAfter int64) []string {
 	apiClient, err := getAPIClient(token)
 	if err != nil {

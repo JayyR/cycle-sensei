@@ -28,7 +28,7 @@ const AssistantMessage = ({ text }: { text: string }) => {
 
 const CodeMessage = ({ text }: { text: string }) => {
   return (
-    <div className={styles.codeMessage}>
+    <div className={styles.codeMessage} >
       {text.split("\n").map((line, index) => (
         <div key={index}>
           <span>{`${index + 1}. `}</span>
@@ -59,7 +59,40 @@ type ChatProps = {
 };
 
 const Chat = ({
-  functionCallHandler = () => Promise.resolve(""), // default to return empty string
+  functionCallHandler = async (toolCall: RequiredActionFunctionToolCall) => {
+    if (toolCall.function.name === "fetch_selected_activities") {
+      try {
+        const athleteId = sessionStorage.getItem("stravaAthleteId");
+        if (!athleteId) {
+          return JSON.stringify({ error: "No athlete ID found" });
+        }
+
+        const response = await fetch(`/api/athlete/${athleteId}/activities/selected`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch selected activities: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return JSON.stringify(data);
+      } catch (error) {
+        console.error("Error in fetch_selected_activities:", error);
+        return JSON.stringify({ error: "Failed to fetch selected activities" });
+      }
+    }
+    if (toolCall.function.name === "fetch_athlete_zones") {
+      try {
+        const zonesData = localStorage.getItem("stravaZones");
+        if (!zonesData) {
+          throw new Error('No zones data found in localStorage');
+        }
+        return zonesData; // Already JSON string, no need to stringify
+      } catch (error) {
+        console.error("Error fetching athlete zones:", error);
+        return JSON.stringify({ error: "Failed to fetch athlete zones" });
+      }
+    }
+    return "";
+  },
 }: ChatProps) => {
 
   const [userInput, setUserInput] = useState("");
